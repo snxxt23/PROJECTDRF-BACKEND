@@ -47,43 +47,45 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id','first_name','last_name','username','email']
-        
-        def __init__(self,*args,**kwargs):
-            super().__init__(*args,**kwargs)
-            user = args[0]
-            if user.is_doctor:
-                self.fields['doctor']=DoctorSerializer()
-            
-        def update(self,instance,validated_data):
-            instance.first_name = validated_data.get('first_name',instance.first_name)
-            instance.last_name = validated_data.get('last_name',instance.last_name)
-            instance.username =  validated_data.get('username',instance.username)
-            instance.email = validated_data.get('email',instance.email)
-            
-            if instance.is_doctor:
-                doctor_data = validated_data.get('doctor')
-                if doctor_data:
-                    doctors = Doctor.objects.filter(user=instance)
-                    if doctors.exists():
-                        doctor = doctors.first()
-                        doctor.hospital = doctor_data.get('hospital',doctor.hospital)
-                        doctor.department = doctor_data.get('department',doctor.department)
-                        if doctor.hospital is not None and doctor.department is not None:
-                            doctor.is_verified=True
-                        doctor.save()
-                    else:
-                        raise ValidationError("No doctor data found for this user.")
-            instance.save()
-            return instance
-        
+
+    def __init__(self,*args,**kwargs):
+        print(args)
+        super().__init__(*args,**kwargs)
+        user = args[0]
+        print(user)
+        if user.is_doctor:
+            self.fields['doctor']=DoctorSerializer()
+
+    def update(self,instance,validated_data):
+        instance.first_name = validated_data.get('first_name',instance.first_name)
+        instance.last_name = validated_data.get('last_name',instance.last_name)
+        instance.username =  validated_data.get('username',instance.username)
+        instance.email = validated_data.get('email',instance.email)
+
+        if instance.is_doctor:
+            doctor_data = validated_data.get('doctor')
+            if doctor_data:
+                doctors = Doctor.objects.filter(user=instance)
+                if doctors.exists():
+                    doctor = doctors.first()
+                    doctor.hospital = doctor_data.get('hospital',doctor.hospital)
+                    doctor.department = doctor_data.get('department',doctor.department)
+                    if doctor.hospital is not None and doctor.department is not None:
+                        doctor.is_verified=True
+                    doctor.save()
+                else:
+                    raise ValidationError("No doctor data found for this user.")
+        instance.save()
+        return instance
+
 class UserProfileAdminSerializer(serializers.ModelSerializer):
     doctor = DoctorSerializer(read_only=True)
     class Meta:
         model = User
         fields = ['id','first_name','last_name','username','email','is_doctor','is_active','doctor']
-        
+
     def update(self,instance,validated_data):
         instance.is_active = validated_data.get('is_active',instance.is_active)
         instance.save()
         return instance
-        
+

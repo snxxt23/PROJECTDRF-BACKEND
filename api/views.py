@@ -8,18 +8,23 @@ from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAdminUser
 from django.db.models import Q
 from .custompermission import UserPermision
+from . models import *
 
 
 class UserRegistration(APIView):
     def post(self,request):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
-            User.objects.create_user(
+            is_doctor = serializer.validated_data['is_doctor'],
+            users = User.objects.create_user(
                 username = serializer.validated_data['username'],
                 email = serializer.validated_data['email'],
                 password = serializer.validated_data['password'],
                 is_doctor = serializer.validated_data['is_doctor'],
             )
+            users.save()
+            if is_doctor:
+                Doctor.objects.create(user=users)
             return Response({"Message":"Registration Success!!!"},status=status.HTTP_201_CREATED)
         return Response({"Message":serializer.errors},status=status.HTTP_400_BAD_REQUEST)
 
@@ -66,11 +71,11 @@ class UserProfileView(APIView):
 class UserDoctorView(APIView):
     def get(self,request):
         q = request.GET.get('q')
-        Q_Base = Q(doctor__is_verified=True)
+        Q_Base = Q(doctor__is_verified=True)&Q(is_active=True)
         search_query = Q()
         if q:
             search_query = Q(username__icontains=q)|Q(doctor__department__icontains=q)|Q(doctor__hospital__icontains=q)
-            Q_Base &= search_query 
+            Q_Base &= search_query
         user = User.objects.filter(Q_Base)
         serializer = UserProfileAdminSerializer(user,many=True)
         return Response(serializer.data,status=status.HTTP_200_OK)
